@@ -36,6 +36,7 @@ enum glyph_attribute {
 	ATTR_WDUMMY     = 1 << 11,
 	ATTR_SELECTED   = 1 << 12,
     ATTR_BOXDRAW    = 1 << 13,
+    ATTR_ZORK       = 1 << 14,
     ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
 
@@ -121,11 +122,15 @@ void *xrealloc(void *, size_t);
 char *xstrdup(const char *);
 
 int isboxdraw(Rune);
+int iszorkdraw(Rune);
 ushort boxdrawindex(const Glyph *);
 #ifdef XFT_VERSION
 /* only exposed to x.c, otherwise we'll need Xft.h for the types */
 void boxdraw_xinit(Display *, Colormap, XftDraw *, Visual *);
 void drawboxes(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *, int);
+
+void zorkdraw_xinit(Display *, Colormap, XftDraw *, Visual *);
+void drawzorks(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *, int);
 #endif
 
 /* config.h globals */
@@ -142,4 +147,5 @@ extern unsigned int defaultfg;
 extern unsigned int defaultbg;
 extern unsigned int defaultcs;
 extern const int boxdraw, boxdraw_bold, boxdraw_braille;
+extern const int zorkdraw;
 extern float alpha;

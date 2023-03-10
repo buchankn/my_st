@@ -2,6 +2,19 @@ st - simple terminal
 --------------------
 st is a simple terminal emulator for X which sucks less.
 
+This is my build of st, with the following patches:
+* alpha
+* anysize
+* bold-is-not-bright
+* boxdraw
+* colorschemes
+* scrollback
+* scrollback-mouse
+* scrollback-mouse-altscreen
+* scrollback-reflow
+* Beyond Zork font (this is a patch I created for my own use :) This allows me to play Beyond Zork within the terminal, with the character graphics font 3, with any terminal font that I want to use. See below for a screenshot of the Beyond Zork font in use -- the map and line around the window use this font. I used the boxdraw patch as inspiration when I created this patch.
+
+![BeyondZork](BeyondZork.png)
 
 Requirements
 ------------

@@ -1449,6 +1449,8 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 
     if (isboxdraw(u))
         term.line[y][x].mode |= ATTR_BOXDRAW;
+    else if (iszorkdraw(u))
+        term.line[y][x].mode |= ATTR_ZORK;
 }
 
 void

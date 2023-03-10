@@ -1,0 +1,1108 @@
+MIT/X Consortium License
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+Subject: [PATCH] st Beyond Zork font
+---
+Index: config.def.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/config.def.h b/config.def.h
+--- a/config.def.h	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/config.def.h	(date 1678627516026)
+@@ -67,6 +67,8 @@
+  */
+ static unsigned int cursorthickness = 2;
+ 
++const int zorkdraw = 1;
++
+ /*
+  * bell volume. It must be a value between -100 and 100. Use 0 for disabling
+  * it
+Index: zorkdraw.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/zorkdraw.c b/zorkdraw.c
+new file mode 100644
+--- /dev/null	(date 1678629109590)
++++ b/zorkdraw.c	(date 1678629109590)
+@@ -0,0 +1,907 @@
++
++#include <X11/Xft/Xft.h>
++#include "st.h"
++
++/* Rounded non-negative integers division of n / d  */
++#define DIV_ROUND(n, d) (((n) + (d) / 2) / (d))
++
++enum draw_elem_type {
++    END_ELEMENTS = 0,
++    DRAW_LINE = 1,
++    DRAW_RECTANGLE = 2,
++    DRAW_ARC = 3,
++    DRAW_CHAR = 4
++};
++
++enum draw_elem_color {
++    DRAW_FOREGROUND = 0,
++    DRAW_BACKGROUND = 1
++};
++
++enum anchor_type {
++    ANCHOR_NONE = 0,
++    ANCHOR_BOTTOM = 1,
++    ANCHOR_TOP = 2,
++    ANCHOR_LEFT = 3,
++    ANCHOR_RIGHT = 4,
++    ANCHOR_TOP_LEFT = 5,
++    ANCHOR_TOP_RIGHT = 6,
++    ANCHOR_BOTTOM_LEFT = 7,
++    ANCHOR_BOTTOM_RIGHT = 8
++};
++
++typedef struct {
++    enum draw_elem_type type;
++    enum draw_elem_color color;
++    float parm1;
++    float parm2;
++    float parm3;
++    float parm4;
++    float parm5;
++    float parm6;
++} DrawElement;
++
++
++static const DrawElement leftArrow[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.35, 0.35 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.35, 0.65 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightArrow[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.9, 0.5, 0.65, 0.35 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.9, 0.5, 0.65, 0.65 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftDiag[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 1, 1, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightDiag[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement blank[] = {
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement midHorizLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement midVertLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement upTee[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement downTee[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightTee[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftTee[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topRightLineCorner[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomRightLineCorner[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomLeftLineCorner[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topLeftLineCorner[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement connectBottomLeftTopCenter[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 1, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement connectBottomCenterTopLeft[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 1, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0, 0 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement connectBottomCenterTopRight[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 1, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement connectBottomRightTopCenter[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 1, 1, 0.5, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement filledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 0.5, ANCHOR_TOP },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5, ANCHOR_BOTTOM },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 0.5, 1, ANCHOR_LEFT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1, ANCHOR_RIGHT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5, ANCHOR_BOTTOM },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 0.5, ANCHOR_TOP },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 0.5, 1, ANCHOR_LEFT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1, ANCHOR_RIGHT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0, 0.5 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topRightFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0, 0.5, 0.5, ANCHOR_TOP_RIGHT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomRightFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0.5, ANCHOR_BOTTOM_RIGHT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomLeftFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5, ANCHOR_BOTTOM_LEFT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topLeftFilledBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 0.5, 0.5, ANCHOR_TOP_LEFT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topRightConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0, 0.5, 0.5, ANCHOR_TOP_RIGHT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomRightConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.5, 0.5, 0.5, 0.5, ANCHOR_BOTTOM_RIGHT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 0, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomLeftConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.5, 0.5, 0.5, ANCHOR_BOTTOM_LEFT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topLeftConnectorBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 0.5, 0.5, ANCHOR_TOP_LEFT },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.5, 1, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topRightDot[] = {
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomRightDot[] = {
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomLeftDot[] = {
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topLeftDot[] = {
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement topLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0, 1, 0 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement bottomLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 1, 1, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0, 0, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 1, 0, 1, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar1[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar2[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.125, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar3[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.25, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar4[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.375, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar5[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.5, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar6[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.625, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar7[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.75, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar8[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.775, 1, 0.1 },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 0.875, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement statsBar9[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.125, 1, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement rightStatsLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 1, 0.125, 1, 0.875 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement leftStatsLine[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.125, 0, 0.875 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement xDiags[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { DRAW_LINE, DRAW_FOREGROUND, 1, 0, 0, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement cross[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0, 0.5, 1, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0, 0.5, 1 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement upArrow[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.5, 0.15 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.15, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.15, 0.5, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement downArrow[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.5, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.85, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.15, 0.5, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement upDownArrow[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.4, 0.5, 0.15 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.15, 0.9, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.1, 0.55, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.8, 0.9, 0.55 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.15, 0.5, 0.8 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement hollowBox[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 0.08, ANCHOR_TOP },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0.92, 1, 0.08, ANCHOR_BOTTOM },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 0.1, 1, ANCHOR_LEFT },
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0.9, 0, 0.1, 1, ANCHOR_RIGHT },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement questionMark[] = {
++        { DRAW_CHAR, DRAW_FOREGROUND, '?' },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeA[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.45, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.4, 0.85, 0.25 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.45, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeB[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.4, 0.15, 0.55 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.6, 0.7 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.7, 0.15, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeC[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.25, 0.45, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.45, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.25, 0.85, 0.55 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeD[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeE[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.5, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.5, 0.45 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeF[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.7, 0.25 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.7, 0.45 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeG[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeH[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.25, 0.25, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.75, 0.25, 0.75, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.35, 0.75, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.55, 0.75, 0.7 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeI[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeJ[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.5, 0.35 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.5, 0.75 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.55, 0.5, 0.35 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.55, 0.5, 0.75 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeK[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.55, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.55, 0.85, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeL[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.45 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeM[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.65 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.65 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeN[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.4, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.4, 0.45, 0.6, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.85, 0.65 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeO[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.45, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.4, 0.85, 0.25 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.45, 0.65 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.65, 0.85, 0.45 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeP[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.85, 0.5, 0.6 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.6, 0.85, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeQ[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.6, 0.4, 0.6 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.4, 0.6, 0.65, 0.7 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.65, 0.7, 0.65, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeR[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.15, 0.65 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.6, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeS[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.65 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.8, 0.35 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.35, 0.8, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeT[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.25, 0.45 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeU[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.8, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.5, 0.8, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeV[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.6875, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6875, 0.45, 0.85, 0.25 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.3375, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.3375, 0.45, 0.15, 0.25 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeW[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.15, 0.65 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeX[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.5, 0.45 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.45, 0.85, 0.25 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeY[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.8, 0.5 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.5, 0.8, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.6, 0.45, 0.6 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.6, 0.45, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement runeZ[] = {
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.15, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.4, 0.85, 0.85 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.4 },
++        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.4, 0.15, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement reverseUpArrow[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.1, 0.5, 0.5, 0.15 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.15, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.15, 0.5, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement reverseDownArrow[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.1, 0.5, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.85, 0.9, 0.5 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.15, 0.5, 0.85 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement reverseUpDownArrow[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.1, 0.4, 0.5, 0.15 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.15, 0.9, 0.4 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.1, 0.55, 0.5, 0.85 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.8, 0.9, 0.55 },
++        { DRAW_LINE, DRAW_BACKGROUND, 0.5, 0.15, 0.5, 0.8 },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement reverseQuestionMark[] = {
++        { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
++        { DRAW_CHAR, DRAW_BACKGROUND, '?' },
++        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
++};
++
++static const DrawElement *zorkFont[256] = {
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        NULL,
++        leftArrow,
++        rightArrow,
++        leftDiag,
++        rightDiag,
++        blank,
++        midHorizLine,
++        midHorizLine,
++        midVertLine,
++        midVertLine,
++        upTee,
++        downTee,
++        rightTee,
++        leftTee,
++        topRightLineCorner,
++        bottomRightLineCorner,
++        bottomLeftLineCorner,
++        topLeftLineCorner,
++        connectBottomLeftTopCenter,
++        connectBottomCenterTopLeft,
++        connectBottomCenterTopRight,
++        connectBottomRightTopCenter,
++        filledBox,
++        topFilledBox,
++        bottomFilledBox,
++        leftFilledBox,
++        rightFilledBox,
++        bottomConnectorBox,
++        topConnectorBox,
++        leftConnectorBox,
++        rightConnectorBox,
++        topRightFilledBox,
++        bottomRightFilledBox,
++        bottomLeftFilledBox,
++        topLeftFilledBox,
++        topRightConnectorBox,
++        bottomRightConnectorBox,
++        bottomLeftConnectorBox,
++        topLeftConnectorBox,
++        topRightDot,
++        bottomRightDot,
++        bottomLeftDot,
++        topLeftDot,
++        topLine,
++        bottomLine,
++        leftLine,
++        rightLine,
++        statsBar1,
++        statsBar2,
++        statsBar3,
++        statsBar4,
++        statsBar5,
++        statsBar6,
++        statsBar7,
++        statsBar8,
++        statsBar9,
++        rightStatsLine,
++        leftStatsLine,
++        xDiags,
++        cross,
++        upArrow,
++        downArrow,
++        upDownArrow,
++        hollowBox,
++        questionMark,
++        runeA,
++        runeB,
++        runeC,
++        runeD,
++        runeE,
++        runeF,
++        runeG,
++        runeH,
++        runeI,
++        runeJ,
++        runeK,
++        runeL,
++        runeM,
++        runeN,
++        runeO,
++        runeP,
++        runeQ,
++        runeR,
++        runeS,
++        runeT,
++        runeU,
++        runeV,
++        runeW,
++        runeX,
++        runeY,
++        runeZ,
++        reverseUpArrow,
++        reverseDownArrow,
++        reverseUpDownArrow,
++        reverseQuestionMark,
++};
++
++static Display *xdpy;
++static Colormap xcmap;
++static XftDraw *xd;
++static Visual *xvis;
++
++static void drawzork(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *);
++
++/* public API */
++
++void
++zorkdraw_xinit(Display *dpy, Colormap cmap, XftDraw *draw, Visual *vis) {
++    xdpy = dpy;
++    xcmap = cmap;
++    xd = draw, xvis = vis;
++}
++
++int
++iszorkdraw(Rune u) {
++    Rune block = u & ~0xff;
++    return (zorkdraw && block == 0xe000);
++}
++
++void
++drawzorks(int x, int y, int cw, int ch, XftColor *fg, XftColor *bg,
++          const XftGlyphFontSpec *specs, int len) {
++    for (; len-- > 0; x += cw, specs++)
++        drawzork(x, y, cw, ch, fg, bg, specs);
++}
++
++/* implementation */
++
++void
++drawzork(int x, int y, int w, int h, XftColor *fg, XftColor *bg, const XftGlyphFontSpec *spec) {
++    Display *display;
++    Drawable drawable;
++    GC gc;
++    XGCValues values;
++
++    int rectX;
++    int rectY;
++    int rightX;
++    int bottomY;
++    unsigned int rectWidth;
++    unsigned int rectHeight;
++
++    ushort ch = spec->glyph;
++
++    /* Display, Drawable, Colormap, and Visual of an XftDraw can be queried with
++     * XftDrawDisplay(), XftDrawDrawable(), XftDrawColormap(), and XftDrawVisual(),
++     * respectively. The X Rendering Extension Picture associated with an XftDraw is
++     * returned by XftDrawPicture().  */
++    display = XftDrawDisplay(xd);
++    drawable = XftDrawDrawable(xd);
++
++    /* create the Graphics Context */
++
++    /* s: stem thickness. width/8 roughly matches underscore thickness. */
++    int mwh = MIN(w, h);
++    int base_s = MAX(1, DIV_ROUND(mwh, 8));
++
++    values.foreground = fg->pixel;
++    values.background = bg->pixel;
++    values.line_width = base_s;
++    gc = XCreateGC(display, drawable, GCForeground | GCBackground | GCLineWidth, &values);
++
++    const DrawElement *charInstr = zorkFont[ch & 0xff];
++
++    if(charInstr != NULL) {
++        enum draw_elem_color curColor = DRAW_FOREGROUND;
++
++        for(int i = 0; charInstr[i].type != END_ELEMENTS; i++) {
++            if(charInstr[i].color != curColor) {
++                curColor = charInstr[i].color;
++                if(curColor == DRAW_FOREGROUND) {
++                    values.foreground = fg->pixel;
++                    values.background = bg->pixel;
++                } else {
++                    values.foreground = bg->pixel;
++                    values.background = fg->pixel;
++                }
++                gc = XCreateGC(display, drawable, GCForeground | GCBackground | GCLineWidth, &values);
++            }
++
++            switch(charInstr[i].type) {
++                case DRAW_LINE:
++                    XDrawLine(display, drawable, gc,
++                              x + w * charInstr[i].parm1,
++                              y + h * charInstr[i].parm2,
++                              x + w * charInstr[i].parm3,
++                              y + h * charInstr[i].parm4);
++                    break;
++
++                case DRAW_RECTANGLE:
++                    rectX = x + w * charInstr[i].parm1;
++                    rectY = y + h * charInstr[i].parm2;
++                    rectWidth = w * charInstr[i].parm3;
++                    rectHeight = h * charInstr[i].parm4;
++                    rightX = x + w;
++                    bottomY = y + h;
++
++                    if(charInstr[i].parm5 == ANCHOR_RIGHT || charInstr[i].parm5 == ANCHOR_TOP_RIGHT) {
++                        rectWidth = rightX - rectX;
++                    } else if(charInstr[i].parm5 == ANCHOR_BOTTOM || charInstr[i].parm5 == ANCHOR_BOTTOM_LEFT) {
++                        rectHeight = bottomY - rectY;
++                    } else if(charInstr[i].parm5 == ANCHOR_BOTTOM_RIGHT) {
++                        rectWidth = rightX - rectX;
++                        rectHeight = bottomY - rectY;
++                    }
++
++                    XFillRectangle(display, drawable, gc,
++                                   rectX,
++                                   rectY,
++                                   rectWidth,
++                                   rectHeight);
++                    break;
++
++                case DRAW_ARC:
++                    XDrawArc(display, drawable, gc,
++                             x + w * charInstr[i].parm1,
++                             y + h * charInstr[i].parm2,
++                             w * charInstr[i].parm3,
++                             h * charInstr[i].parm4,
++                             charInstr[i].parm5 * 64,
++                             charInstr[i].parm6 * 64);
++                    break;
++
++                case DRAW_CHAR:
++                    char val = charInstr[i].parm1;
++                    if(charInstr[i].color == DRAW_FOREGROUND) {
++                        XftDrawString8(xd, fg, spec->font,
++                                       spec->x, spec->y, &val, 1);
++                    } else {
++                        XftDrawString8(xd, bg, spec->font,
++                                       spec->x, spec->y, &val, 1);
++                    }
++                    break;
++
++                default:
++                    break;
++            }
++        }
++    }
++}
+Index: st.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/st.h b/st.h
+--- a/st.h	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/st.h	(date 1678628155897)
+@@ -33,6 +33,7 @@
+ 	ATTR_WRAP       = 1 << 8,
+ 	ATTR_WIDE       = 1 << 9,
+ 	ATTR_WDUMMY     = 1 << 10,
++    ATTR_ZORK       = 1 << 11,
+ 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
+ };
+ 
+@@ -110,6 +111,13 @@
+ void *xmalloc(size_t);
+ void *xrealloc(void *, size_t);
+ char *xstrdup(const char *);
++int iszorkdraw(Rune);
++
++#ifdef XFT_VERSION
++/* only exposed to x.c, otherwise we'll need Xft.h for the types */
++void zorkdraw_xinit(Display *, Colormap, XftDraw *, Visual *);
++void drawzorks(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *, int);
++#endif
+ 
+ /* config.h globals */
+ extern char *utmp;
+@@ -124,3 +132,4 @@
+ extern unsigned int defaultfg;
+ extern unsigned int defaultbg;
+ extern unsigned int defaultcs;
++extern const int zorkdraw;
+Index: x.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/x.c b/x.c
+--- a/x.c	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/x.c	(date 1678628573130)
+@@ -1237,6 +1237,8 @@
+ 	xsel.xtarget = XInternAtom(xw.dpy, "UTF8_STRING", 0);
+ 	if (xsel.xtarget == None)
+ 		xsel.xtarget = XA_STRING;
++
++    zorkdraw_xinit(xw.dpy, xw.cmap, xw.draw, xw.vis);
+ }
+ 
+ int
+@@ -1283,8 +1285,13 @@
+ 			yp = winy + font->ascent;
+ 		}
+ 
+-		/* Lookup character index with default font. */
+-		glyphidx = XftCharIndex(xw.dpy, font->match, rune);
++        if (mode & ATTR_ZORK) {
++            glyphidx = (glyphs[i].u & 0xff);
++        } else {
++            /* Lookup character index with default font. */
++            glyphidx = XftCharIndex(xw.dpy, font->match, rune);
++        }
++
+ 		if (glyphidx) {
+ 			specs[numspecs].font = font->match;
+ 			specs[numspecs].glyph = glyphidx;
+@@ -1488,8 +1495,12 @@
+ 	r.width = width;
+ 	XftDrawSetClipRectangles(xw.draw, winx, winy, &r, 1);
+ 
+-	/* Render the glyphs. */
+-	XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
++    if (base.mode & ATTR_ZORK) {
++        drawzorks(winx, winy, width / len, win.ch, fg, bg, specs, len);
++    } else {
++        /* Render the glyphs. */
++        XftDrawGlyphFontSpec(xw.draw, fg, specs, len);
++    }
+ 
+ 	/* Render underline and strikethrough. */
+ 	if (base.mode & ATTR_UNDERLINE) {
+@@ -1532,7 +1543,7 @@
+ 	/*
+ 	 * Select the right color for the right mode.
+ 	 */
+-	g.mode &= ATTR_BOLD|ATTR_ITALIC|ATTR_UNDERLINE|ATTR_STRUCK|ATTR_WIDE;
++	g.mode &= ATTR_BOLD|ATTR_ITALIC|ATTR_UNDERLINE|ATTR_STRUCK|ATTR_WIDE|ATTR_ZORK;
+ 
+ 	if (IS_SET(MODE_REVERSE)) {
+ 		g.mode |= ATTR_REVERSE;
+Index: Makefile
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/Makefile b/Makefile
+--- a/Makefile	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/Makefile	(date 1678627586572)
+@@ -4,7 +4,7 @@
+ 
+ include config.mk
+ 
+-SRC = st.c x.c
++SRC = st.c x.c zorkdraw.c
+ OBJ = $(SRC:.c=.o)
+ 
+ all: options st
+@@ -23,6 +23,7 @@
+ 
+ st.o: config.h st.h win.h
+ x.o: arg.h config.h st.h win.h
++zorkdraw.o: config.h st.h
+ 
+ $(OBJ): config.h config.mk
+ 
+Index: config.mk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/config.mk b/config.mk
+--- a/config.mk	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/config.mk	(date 1678629109580)
+@@ -16,7 +16,7 @@
+ INCS = -I$(X11INC) \
+        `$(PKG_CONFIG) --cflags fontconfig` \
+        `$(PKG_CONFIG) --cflags freetype2`
+-LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
++LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft -lXrender \
+        `$(PKG_CONFIG) --libs fontconfig` \
+        `$(PKG_CONFIG) --libs freetype2`
+ 
+Index: st.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/st.c b/st.c
+--- a/st.c	(revision 211964d56ee00a7d46e251cbc150afb79138ae37)
++++ b/st.c	(date 1678628006163)
+@@ -1215,6 +1215,9 @@
+ 	term.dirty[y] = 1;
+ 	term.line[y][x] = *attr;
+ 	term.line[y][x].u = u;
++
++    if (iszorkdraw(u))
++        term.line[y][x].mode |= ATTR_ZORK;
+ }
+ 
+ void

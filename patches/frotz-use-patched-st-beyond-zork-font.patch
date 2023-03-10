@@ -1,0 +1,118 @@
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+Subject: [PATCH] Frotz patch to use patched version of st that has font 3 built-in.
+---
+Index: src/curses/ux_text.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/curses/ux_text.c b/src/curses/ux_text.c
+--- a/src/curses/ux_text.c	(revision 2a3be7dae6f79e0ad66a5daca40b31a65d43537e)
++++ b/src/curses/ux_text.c	(date 1678580578647)
+@@ -42,6 +42,7 @@
+  * color_enabled is FALSE.
+  */
+ bool color_enabled = FALSE;
++int current_font = 0;
+ 
+ /* int current_color = 0; */
+ 
+@@ -71,7 +72,7 @@
+  */
+ int os_font_data (int font, int *height, int *width)
+ {
+-	if (font == TEXT_FONT) {
++	if (font == TEXT_FONT || font == GRAPHICS_FONT) {
+ 		*height = 1;
+ 		*width = 1;
+ 		return 1; /* Truth in advertising */
+@@ -208,9 +209,9 @@
+  * choose fonts which aren't supported by the interface.
+  *
+  */
+-void os_set_font (int UNUSED(new_font))
++void os_set_font (int new_font)
+ {
+-	/* Not implemented */
++	current_font = new_font;
+ } /* os_set_font */
+ 
+ 
+@@ -227,6 +228,10 @@
+  */
+ void os_display_char (zchar c)
+ {
++    if(current_font == GRAPHICS_FONT) {
++        c = c + 0xe000;
++    }
++
+ 	if (c >= ZC_LATIN1_MIN) {
+ 		if (u_setup.plain_ascii) {
+ 			char *ptr = latin1_to_ascii + 3 * (c - ZC_LATIN1_MIN);
+Index: src/x11/x_init.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/x11/x_init.c b/src/x11/x_init.c
+--- a/src/x11/x_init.c	(revision 2a3be7dae6f79e0ad66a5daca40b31a65d43537e)
++++ b/src/x11/x_init.c	(date 1678295299888)
+@@ -455,7 +455,7 @@
+ 	    && f_setup.undo_slots == 0)
+ 		z_header.flags &= ~UNDO_FLAG;
+ 
+-	z_header.interpreter_number = INTERP_DEC_20;
++	z_header.interpreter_number = INTERP_AMIGA;
+ 	z_header.interpreter_version = 'F';
+ 
+ 	x_init_colour(user_bg, user_fg);
+Index: src/curses/ux_init.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/curses/ux_init.c b/src/curses/ux_init.c
+--- a/src/curses/ux_init.c	(revision 2a3be7dae6f79e0ad66a5daca40b31a65d43537e)
++++ b/src/curses/ux_init.c	(date 1678295299901)
+@@ -540,7 +540,7 @@
+ 	/* Use the ms-dos interpreter number for v6, because that's the
+ 	 * kind of graphics files we understand.  Otherwise, use DEC.  */
+ 	if (f_setup.interpreter_number == INTERP_DEFAULT)
+-		z_header.interpreter_number = z_header.version == V6 ? INTERP_MSDOS : INTERP_DEC_20;
++		z_header.interpreter_number = z_header.version == V6 ? INTERP_MSDOS : INTERP_AMIGA;
+ 	else
+ 		z_header.interpreter_number = f_setup.interpreter_number;
+ 
+@@ -1158,7 +1158,7 @@
+ 
+ void os_init_setup(void)
+ {
+-	f_setup.interpreter_number = INTERP_DEC_20;
++	f_setup.interpreter_number = INTERP_AMIGA;
+ 
+ 	u_setup.disable_color = 0;
+ 	u_setup.force_color = 0;
+Index: src/dumb/dinit.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/dumb/dinit.c b/src/dumb/dinit.c
+--- a/src/dumb/dinit.c	(revision 2a3be7dae6f79e0ad66a5daca40b31a65d43537e)
++++ b/src/dumb/dinit.c	(date 1678295299908)
+@@ -281,7 +281,7 @@
+ 	 * kind of graphics files we understand.  Otherwise, use DEC.  */
+ 	if (f_setup.interpreter_number == INTERP_DEFAULT)
+ 		z_header.interpreter_number = z_header.version ==
+-			6 ? INTERP_MSDOS : INTERP_DEC_20;
++			6 ? INTERP_MSDOS : INTERP_AMIGA;
+ 	else
+ 		z_header.interpreter_number = f_setup.interpreter_number;
+ 
