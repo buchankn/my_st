@@ -1316,7 +1316,7 @@ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x
 			/* minor shoehorning: boxdraw uses only this ushort */
 			glyphidx = boxdrawindex(&glyphs[i]);
 		} else if (mode & ATTR_ZORK) {
-            glyphidx = (glyphs[i].u & 0xff) % 0x5d;
+            glyphidx = (glyphs[i].u & 0xff);
         } else {
 			/* Lookup character index with default font. */
 			glyphidx = XftCharIndex(xw.dpy, font->match, rune);
