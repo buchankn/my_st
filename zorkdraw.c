@@ -413,9 +413,202 @@ static const DrawElement questionMark[] = {
         { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
 };
 
+static const DrawElement runeA[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.45, 0.4 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.4, 0.85, 0.25 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.45, 0.75 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
 
+static const DrawElement runeB[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.4 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.4, 0.15, 0.55 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.6, 0.7 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.7, 0.15, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
 
+static const DrawElement runeC[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.25, 0.45, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.45, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.25, 0.85, 0.55 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
 
+static const DrawElement runeD[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeE[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.5, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.5, 0.45 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeF[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.7, 0.25 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.7, 0.45 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeG[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeH[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.25, 0.25, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.75, 0.25, 0.75, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.35, 0.75, 0.5 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.25, 0.55, 0.75, 0.7 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeI[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeJ[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.5, 0.35 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.55, 0.5, 0.75 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.55, 0.5, 0.35 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.55, 0.5, 0.75 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeK[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.55, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.55, 0.85, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeL[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.45 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeM[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.85, 0.65 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.25, 0.15, 0.65 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeN[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.4, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.4, 0.45, 0.6, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.85, 0.65 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeO[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.45, 0.4 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.4, 0.85, 0.25 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.45, 0.45, 0.65 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.65, 0.85, 0.45 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeP[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.85, 0.5, 0.6 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.6, 0.85, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeQ[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.6, 0.4, 0.6 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.4, 0.6, 0.65, 0.7 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.65, 0.7, 0.65, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeR[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.15, 0.65 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.6, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeS[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.65 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.65, 0.8, 0.35 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.35, 0.8, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeT[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.25, 0.45 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeU[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.8, 0.5 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.5, 0.8, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeV[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.6875, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6875, 0.45, 0.85, 0.25 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.3375, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.3375, 0.45, 0.15, 0.25 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeW[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.6, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.6, 0.45, 0.15, 0.65 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeX[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.5, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.5, 0.45 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.45, 0.85, 0.25 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeY[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.15, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.25, 0.8, 0.5 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.8, 0.5, 0.8, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.6, 0.45, 0.6 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.45, 0.6, 0.45, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
+
+static const DrawElement runeZ[] = {
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.15, 0.4 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.15, 0.4, 0.85, 0.85 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.5, 0.25, 0.85, 0.4 },
+        { DRAW_LINE, DRAW_FOREGROUND, 0.85, 0.4, 0.15, 0.85 },
+        { END_ELEMENTS, DRAW_BACKGROUND, 0, 0, 0, 0 }
+};
 
 static const DrawElement reverseUpArrow[] = {
         { DRAW_RECTANGLE, DRAW_FOREGROUND, 0, 0, 1, 1 },
@@ -515,8 +708,32 @@ static const DrawElement *zorkFont[256] = {
         upDownArrow,
         hollowBox,
         questionMark,
-
-
+        runeA,
+        runeB,
+        runeC,
+        runeD,
+        runeE,
+        runeF,
+        runeG,
+        runeH,
+        runeI,
+        runeJ,
+        runeK,
+        runeL,
+        runeM,
+        runeN,
+        runeO,
+        runeP,
+        runeQ,
+        runeR,
+        runeS,
+        runeT,
+        runeU,
+        runeV,
+        runeW,
+        runeX,
+        runeY,
+        runeZ,
         reverseUpArrow,
         reverseDownArrow,
         reverseUpDownArrow,
